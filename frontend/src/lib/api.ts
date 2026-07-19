@@ -2,13 +2,21 @@
 // Coordinates requests and automatically manages Bearer token injection.
 // Includes a custom Stale-While-Revalidate (SWR) cache client-side for instant transitions.
 
-import { MockUser } from "./mock-auth";
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  tenant_id: string;
+  professional_license?: string;
+  tenant_name: string;
+}
 
-const BACKEND_URL = "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "https://vetflow-api-pgdb.onrender.com";
 
 class ApiClient {
   private token: string | null = null;
-  private activeUser: MockUser | null = null;
+  private activeUser: UserProfile | null = null;
   private onChangeListeners: (() => void)[] = [];
   private cache = new Map<string, any>();
 
@@ -26,7 +34,7 @@ class ApiClient {
     }
   }
 
-  public setAuth(token: string, user: MockUser) {
+  public setAuth(token: string, user: UserProfile) {
     this.token = token;
     this.activeUser = user;
     if (typeof window !== "undefined") {
@@ -48,7 +56,7 @@ class ApiClient {
     this.triggerChange();
   }
 
-  public getActiveUser(): MockUser | null {
+  public getActiveUser(): UserProfile | null {
     return this.activeUser;
   }
 

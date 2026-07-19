@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
   Users, 
@@ -10,31 +10,38 @@ import {
   Stethoscope, 
   Package, 
   CreditCard, 
-  ShieldAlert,
   Moon,
   Sun,
-  CheckCircle2,
-  RefreshCw,
   Menu,
-  X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  RefreshCw
 } from "lucide-react";
 import "./globals.css";
 import { api } from "../lib/api";
-import { MOCK_USERS, generateMockJWT, MockUser } from "../lib/mock-auth";
+import { AuthProvider, useAuth } from "../lib/auth-context";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <AuthProvider>
+      <AppContent>{children}</AppContent>
+    </AuthProvider>
+  );
+}
+
+function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
+  
   const [darkMode, setDarkMode] = useState(true);
-  const [activeUser, setActiveUser] = useState<MockUser | null>(null);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
-  const [isSigning, setIsSigning] = useState(false);
   
   // Responsive sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -55,22 +62,6 @@ export default function RootLayout({
 
   useEffect(() => {
     checkHealth();
-    
-    // Load initial user
-    const user = api.getActiveUser();
-    if (user) {
-      setActiveUser(user);
-    } else {
-      // Set Laura Gomez (attending vet) as default for demo convenience
-      handleUserChange(MOCK_USERS[1]);
-    }
-
-    // Subscribe to API updates
-    const unsubscribe = api.subscribe(() => {
-      setActiveUser(api.getActiveUser());
-    });
-
-    return () => unsubscribe();
   }, []);
 
   // Close mobile drawer when path changes
@@ -78,19 +69,53 @@ export default function RootLayout({
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  const handleUserChange = async (user: MockUser) => {
-    setIsSigning(true);
-    try {
-      // Sign HS256 JWT using client-side Web Crypto
-      const token = await generateMockJWT(user);
-      api.setAuth(token, user);
-      setActiveUser(user);
-    } catch (e) {
-      console.error("Authentication simulation failed", e);
-    } finally {
-      setIsSigning(false);
+  // Route protection and redirection
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user && pathname !== "/login") {
+        router.replace("/login");
+      } else if (user && pathname === "/login") {
+        router.replace("/");
+      }
     }
-  };
+  }, [user, isLoading, pathname, router]);
+
+  if (isLoading) {
+    return (
+      <html lang="es" className={darkMode ? "dark-theme" : ""}>
+        <body className="h-screen w-screen flex items-center justify-center bg-slate-950 text-white">
+          <div className="flex flex-col items-center space-y-4">
+            <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Cargando sesión segura...</span>
+          </div>
+        </body>
+      </html>
+    );
+  }
+
+  // If not logged in and on /login, render the login page without the layout
+  if (!user && pathname === "/login") {
+    return (
+      <html lang="es" className={darkMode ? "dark-theme" : ""}>
+        <body className="overflow-hidden bg-background">
+          {children}
+        </body>
+      </html>
+    );
+  }
+
+  // If not logged in and not on /login, show a clean loading screen while redirecting
+  if (!user) {
+    return (
+      <html lang="es" className={darkMode ? "dark-theme" : ""}>
+        <body className="h-screen w-screen flex items-center justify-center bg-slate-950 text-white">
+          <div className="flex flex-col items-center space-y-2">
+            <span className="text-xs text-muted-foreground">Redirigiendo a la pantalla de acceso...</span>
+          </div>
+        </body>
+      </html>
+    );
+  }
 
   const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -117,61 +142,6 @@ export default function RootLayout({
             </div>
           )}
         </div>
-
-        {/* TESTING WARNING PIN */}
-        {(!sidebarCollapsed || isMobile) ? (
-          <div className="border border-red-500/30 bg-red-500/5 rounded-lg p-2 space-y-1 animate-border-pulse">
-            <div className="flex items-center space-x-1 text-red-500 font-semibold text-[9.5px]">
-              <ShieldAlert className="w-3 h-3" />
-              <span>DEV TESTING MODE</span>
-            </div>
-            <p className="text-[8.5px] text-muted-foreground leading-tight">
-              Simulador JWT HS256 local para pruebas RLS y RBAC.
-            </p>
-          </div>
-        ) : (
-          <div className="flex justify-center text-red-500" title="Modo Pruebas Activo">
-            <ShieldAlert className="w-4 h-4 animate-pulse" />
-          </div>
-        )}
-
-        {/* MOCK AUTH / TENANT SELECTOR */}
-        {(!sidebarCollapsed || isMobile) ? (
-          <div className="space-y-1.5">
-            <label className="text-[8.5px] font-bold text-muted-foreground uppercase tracking-wider px-1">
-              Simular Usuario (Auth)
-            </label>
-            <div className="space-y-1">
-              {MOCK_USERS.map((user) => {
-                const isSelected = activeUser?.id === user.id;
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() => handleUserChange(user)}
-                    disabled={isSigning}
-                    className={`w-full text-left px-2 py-1.5 rounded-lg transition-all flex flex-col border ${
-                      isSelected 
-                        ? "bg-foreground/5 border-foreground/10 text-foreground font-semibold shadow-sm" 
-                        : "border-transparent text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-[10.5px] truncate">{user.name}</span>
-                      {isSelected && <CheckCircle2 className="w-2.5 h-2.5 text-indigo-500 shrink-0" />}
-                    </div>
-                    <span className="text-[8px] text-muted-foreground font-normal truncate mt-0.5">
-                      {user.role}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-center text-muted-foreground text-[10px] font-bold uppercase py-1">
-            🔑
-          </div>
-        )}
 
         {/* NAVIGATION LINKS */}
         <nav className="space-y-1">
@@ -209,17 +179,20 @@ export default function RootLayout({
       {/* FOOTER WIDGETS */}
       <div className="space-y-3 pt-3 border-t border-border/40">
         
-        {/* ACTIVE INQUILINO / SECURITY CONTEXT */}
-        {activeUser && (!sidebarCollapsed || isMobile) && (
+        {/* ACTIVE USER / SECURITY CONTEXT */}
+        {(!sidebarCollapsed || isMobile) && (
           <div className="bg-foreground/5 rounded-lg p-2 flex flex-col border border-border/30 text-[9.5px]">
             <span className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider leading-none">
-              Contexto de Seguridad:
+              Usuario Conectado:
             </span>
-            <span className="font-semibold text-foreground truncate mt-1">
-              ID: {activeUser.tenant_id.slice(0, 8)}...
+            <span className="font-bold text-foreground truncate mt-1.5">
+              {user.name}
             </span>
-            <span className="text-muted-foreground truncate">
-              Rol: {activeUser.role}
+            <span className="text-muted-foreground truncate mt-0.5">
+              {user.role}
+            </span>
+            <span className="text-[8px] text-muted-foreground truncate font-mono mt-1 block">
+              T: {user.tenant_name}
             </span>
           </div>
         )}
@@ -233,7 +206,7 @@ export default function RootLayout({
           <button 
             onClick={checkHealth}
             disabled={isCheckingHealth}
-            className="flex items-center space-x-1 hover:text-foreground text-left"
+            className="flex items-center space-x-1 hover:text-foreground text-left shrink-0"
             title="Sincronización de API"
           >
             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -247,10 +220,19 @@ export default function RootLayout({
             )}
           </button>
 
+          {/* Logout Button */}
+          <button 
+            onClick={logout}
+            className="p-1 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 shrink-0 cursor-pointer"
+            title="Cerrar Sesión"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
+
           {/* Theme Toggle */}
           <button 
             onClick={() => setDarkMode(!darkMode)}
-            className="p-1 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground shrink-0"
+            className="p-1 rounded-lg hover:bg-foreground/5 text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
             aria-label="Alternar tema"
           >
             {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -299,9 +281,12 @@ export default function RootLayout({
         </aside>
 
         {/* DESKTOP/TABLET SIDEBAR */}
-        <aside className={`hidden lg:flex flex-col justify-between border-r glass-card z-30 shrink-0 transition-all duration-200 ease-in-out relative ${
-          sidebarCollapsed ? "w-16" : "w-60"
-        }`}>
+        <aside 
+          className={`hidden lg:flex flex-col justify-between border-r z-30 shrink-0 transition-all duration-200 ease-in-out relative ${
+            sidebarCollapsed ? "w-16" : "w-60"
+          }`}
+          style={{ backgroundColor: darkMode ? "#111827" : "#ffffff" }}
+        >
           {/* Collapse/Expand Toggle Button */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -332,7 +317,7 @@ export default function RootLayout({
               <div className="flex items-center space-x-1.5 text-[11.5px]">
                 <span className="text-muted-foreground hidden xs:inline">Localización:</span>
                 <span className="font-semibold text-foreground truncate max-w-[130px] sm:max-w-none">
-                  {activeUser?.tenant_id === "a1111111-1111-4111-a111-111111111111" ? "México (MX) • MXN" : "Colombia (CO) • COP"}
+                  {user.tenant_name}
                 </span>
               </div>
             </div>
@@ -340,22 +325,45 @@ export default function RootLayout({
             {/* Right side: User Profile */}
             <div className="flex items-center space-x-3">
               <div className="flex flex-col text-right hidden sm:flex">
-                <span className="text-[11.5px] font-semibold text-foreground leading-tight">{activeUser?.name}</span>
-                <span className="text-[8.5px] text-muted-foreground leading-none">{activeUser?.email}</span>
+                <span className="text-[11.5px] font-semibold text-foreground leading-tight">{user.name}</span>
+                <span className="text-[8.5px] text-muted-foreground leading-none">{user.email}</span>
               </div>
               <div className="w-7.5 h-7.5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center font-bold text-white text-[11px] shrink-0 select-none shadow-sm shadow-indigo-500/10">
-                {activeUser?.name?.charAt(0) || "U"}
+                {user.name?.charAt(0) || "U"}
               </div>
             </div>
+
           </header>
 
-          {/* PAGE BODY */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0 relative">
+          {/* PAGE CONTENT CONTAINER */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
             {children}
           </div>
+
         </main>
         
       </body>
     </html>
+  );
+}
+
+// Simple absolute close icon mock wrapper for compilation safety
+function X(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }
