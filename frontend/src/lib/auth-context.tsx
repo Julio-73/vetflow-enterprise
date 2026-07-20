@@ -20,6 +20,7 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  demoLogin: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -32,12 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserProfile = useCallback(async (token: string, email: string) => {
     try {
-      // Temporarily set the token in api client to authorize backend requests
-      // Use a mock user profile during the bootstrap phase
       const tempUser = { id: "", email, name: "", role: "", tenant_id: "", tenant_name: "" };
       api.setAuth(token, tempUser);
 
-      // Fetch tenant and users list from real backend (Render)
       const [tenant, users] = await Promise.all([
         api.getTenantMe(),
         api.getTenantUsers()
@@ -58,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         tenant_name: tenant.name
       };
 
-      // Set the final verified authentication details
       api.setAuth(token, userProfile);
       setUser(userProfile);
     } catch (e: any) {
@@ -70,21 +67,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // 1. Recover active session on mount
     const bootstrapAuth = async () => {
       try {
+        const storedUser = api.getActiveUser();
         const { data: { session: activeSession } } = await supabase.auth.getSession();
+        
         if (activeSession && activeSession.user?.email) {
           setSession(activeSession);
           await loadUserProfile(activeSession.access_token, activeSession.user.email);
+        } else if (storedUser) {
+          setUser(storedUser);
         } else {
           api.clearAuth();
           setUser(null);
         }
       } catch (e) {
         console.error("Auth restoration error:", e);
-        api.clearAuth();
-        setUser(null);
+        const storedUser = api.getActiveUser();
+        if (storedUser) {
+          setUser(storedUser);
+        } else {
+          api.clearAuth();
+          setUser(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -92,22 +97,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     bootstrapAuth();
 
-    // 2. Listen to Supabase Auth state changes (RS256 token refreshes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (newSession && newSession.user?.email) {
         setSession(newSession);
-        // Refresh token in the api client
         try {
           await loadUserProfile(newSession.access_token, newSession.user.email);
         } catch {
-          // Profile fetch failed, redirect to login
           setSession(null);
           setUser(null);
         }
       } else {
-        setSession(null);
-        setUser(null);
-        api.clearAuth();
+        const storedUser = api.getActiveUser();
+        if (!storedUser) {
+          setSession(null);
+          setUser(null);
+          api.clearAuth();
+        }
       }
     });
 
@@ -141,6 +146,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const demoLogin = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const demoProfiles: Record<string, UserProfile> = {
+        "laura.gomez@sanmartin.com": {
+          id: "22222222-2222-2222-2222-222222222222",
+          email: "laura.gomez@sanmartin.com",
+          name: "Dra. Laura Gómez",
+          role: "Veterinario",
+          tenant_id: "a1111111-1111-4111-a111-111111111111",
+          professional_license: "MV-98765-MX",
+          tenant_name: "Clínica Veterinaria San Martín"
+        },
+        "carlos.admin@sanmartin.com": {
+          id: "11111111-1111-1111-1111-111111111111",
+          email: "carlos.admin@sanmartin.com",
+          name: "Carlos Pérez",
+          role: "TenantOwner",
+          tenant_id: "a1111111-1111-4111-a111-111111111111",
+          tenant_name: "Clínica Veterinaria San Martín"
+        },
+        "maria.lopez@sanmartin.com": {
+          id: "44444444-4444-4444-4444-444444444444",
+          email: "maria.lopez@sanmartin.com",
+          name: "María López",
+          role: "Recepcionista",
+          tenant_id: "a1111111-1111-4111-a111-111111111111",
+          tenant_name: "Clínica Veterinaria San Martín"
+        },
+        "roberto.silva@delbosque.com": {
+          id: "55555555-5555-5555-5555-555555555555",
+          email: "roberto.silva@delbosque.com",
+          name: "Dr. Roberto Silva",
+          role: "DirectorClinico",
+          tenant_id: "b2222222-2222-4222-b222-222222222222",
+          professional_license: "MV-12345-CO",
+          tenant_name: "Clínica Veterinaria Del Bosque"
+        }
+      };
+
+      const selected = demoProfiles[email.toLowerCase()] || demoProfiles["laura.gomez@sanmartin.com"];
+      api.setAuth("demo-jwt-token", selected);
+      setUser(selected);
+    } catch (e) {
+      console.error("Demo login error:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -156,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, session, isLoading, login, demoLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );
