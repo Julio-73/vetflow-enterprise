@@ -1,15 +1,27 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://example.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-anon-key";
+function getSupabaseConfig() {
+  let url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  let key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (supabaseUrl === "https://example.supabase.co" || supabaseAnonKey === "mock-anon-key") {
-  console.warn(
-    "Warning: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are not configured. Supabase Auth requests will fail until they are configured in environment variables."
-  );
+  if (typeof window !== "undefined") {
+    if (!url || url === "https://example.supabase.co") {
+      url = localStorage.getItem("vetflow_supabase_url") || "https://example.supabase.co";
+    }
+    if (!key || key === "mock-anon-key") {
+      key = localStorage.getItem("vetflow_supabase_anon_key") || "mock-anon-key";
+    }
+  }
+
+  return {
+    url: url || "https://example.supabase.co",
+    key: key || "mock-anon-key"
+  };
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+const config = getSupabaseConfig();
+
+export const supabase = createClient(config.url, config.key, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
