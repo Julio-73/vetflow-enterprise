@@ -214,12 +214,12 @@ export default function Dashboard() {
         <div className="md:col-span-2 p-5 md:p-6 rounded-xl border glass-card space-y-4">
           <h3 className="font-semibold text-foreground text-sm flex items-center space-x-2 border-b border-border/30 pb-3">
             <Compass className="w-4 h-4 text-indigo-500" />
-            <span>Guía de Validación de Seguridad Multi-Tenant y Reglas</span>
+            <span>Resumen Operativo y Cumplimiento Normativo de la Clínica</span>
           </h3>
           
           <div className="space-y-4 text-xs">
             <p className="text-muted-foreground leading-relaxed">
-              Usa el selector **Simular Usuario** de la barra lateral izquierda para alternar de tenant y validar de forma práctica el aislamiento:
+              Resumen ejecutivo de controles automáticos de seguridad, salud y normatividad activa en la clínica:
             </p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -227,40 +227,40 @@ export default function Dashboard() {
               <div className="border border-border/50 rounded-xl p-4 space-y-2 bg-foreground/[0.02]">
                 <h4 className="font-semibold text-foreground flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0"></span>
-                  <span>1. Aislamiento RLS en Base de Datos</span>
+                  <span>1. Aislamiento Multi-Tenant RLS</span>
                 </h4>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Prueba con **Laura Gómez (Tenant A)** y verás una lista de pacientes y existencias. Cambia a **Roberto Silva (Tenant B)**; la agenda, sucursales y stock se filtrarán nativamente sin fugas de información.
+                  Seguridad bancaria nivel PostgreSQL RLS (`app.current_tenant_id`). Los datos clínicos, historiales y registros contables están 100% aislados y protegidos por sucursal e inquilino.
                 </p>
               </div>
 
               <div className="border border-border/50 rounded-xl p-4 space-y-2 bg-foreground/[0.02]">
                 <h4 className="font-semibold text-foreground flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0"></span>
-                  <span>2. Validación de Cédulas en Recetas</span>
+                  <span>2. Recetas de Medicamentos Controlados</span>
                 </h4>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Con **Laura Gómez (Veterinario, con cédula)** podrás emitir recetas controladas (como Fentanilo). Si seleccionas a **María López (Recepcionista)**, el sistema bloqueará la acción inmediatamente.
+                  Validación automática de Cédula Profesional en recetas de estupefacientes y opioides. Restricción inmediata por perfil RBAC para prevenir emisiones no autorizadas.
                 </p>
               </div>
 
               <div className="border border-border/50 rounded-xl p-4 space-y-2 bg-foreground/[0.02]">
                 <h4 className="font-semibold text-foreground flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0"></span>
-                  <span>3. Inmutabilidad Historial EMR</span>
+                  <span>3. Historial Clínico EMR Inmutable</span>
                 </h4>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  En el módulo clínico, abre una consulta y edítala libremente. Al hacer clic en **Sellar**, el trigger de base de datos bloqueará cualquier cambio posterior, arrojando error de inmutabilidad en la API.
+                  Expedientes veterinarios con sellado digital inalterable por triggers de base de datos. Garantiza trazabilidad médica y cumplimiento legal ante auditorías sanitarias.
                 </p>
               </div>
 
               <div className="border border-border/50 rounded-xl p-4 space-y-2 bg-foreground/[0.02]">
                 <h4 className="font-semibold text-foreground flex items-center space-x-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
-                  <span>4. Facturación SAT (MX) vs DIAN (CO)</span>
+                  <span>4. Facturación Fiscal SAT (MX) & DIAN (CO)</span>
                 </h4>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Registra un cobro en la sucursal de la Sede Principal y verás el timbrado en formato XML SAT. Hazlo en la Sede Del Bosque de Colombia y el sistema resolverá de forma dinámica la factura DIAN con CUFE.
+                  Timbrado fiscal dinámico multi-país. Generación automática de XML con sello SAT para México o CUFE DIAN para Colombia al cerrar ventas en caja.
                 </p>
               </div>
 
