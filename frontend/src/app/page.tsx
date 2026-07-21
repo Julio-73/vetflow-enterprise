@@ -11,7 +11,8 @@ import {
   Compass, 
   Info,
   CalendarCheck,
-  Stethoscope
+  Stethoscope,
+  X
 } from "lucide-react";
 import { api } from "../lib/api";
 
@@ -24,6 +25,7 @@ export default function Dashboard() {
   
   const [isLoading, setIsLoading] = useState(() => !api.getCached("/api/v1/tenants/me"));
   const [isApiFallback, setIsApiFallback] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const [activeUser, setActiveUser] = useState<any>(null);
 
   const fetchDashboardData = useCallback(async (showLoading = false) => {
@@ -101,15 +103,24 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       
-      {isApiFallback && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start space-x-3 transition-all duration-300">
-          <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <h4 className="font-semibold text-amber-500 text-xs uppercase tracking-wider">Modo Demo Local Activo</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Navegando con credenciales de prueba local. Para sincronizar datos reales en tiempo real con la nube en Render (<span className="font-mono text-amber-300">vetflow-api-pgdb.onrender.com</span>), inicia sesión con un usuario registrado en Supabase Auth.
-            </p>
+      {isApiFallback && !bannerDismissed && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start justify-between space-x-3 transition-all duration-300">
+          <div className="flex items-start space-x-3">
+            <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-semibold text-amber-500 text-xs uppercase tracking-wider">Modo Demo Local Activo</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Navegando con credenciales de prueba local. Para sincronizar datos reales en tiempo real con la nube en Render (<span className="font-mono text-amber-300">vetflow-api-pgdb.onrender.com</span>), inicia sesión con un usuario registrado en Supabase Auth.
+              </p>
+            </div>
           </div>
+          <button 
+            onClick={() => setBannerDismissed(true)}
+            className="p-1.5 rounded-lg text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10 shrink-0 cursor-pointer"
+            title="Ocultar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
